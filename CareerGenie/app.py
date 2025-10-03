@@ -28,6 +28,18 @@ from pathlib import Path
 from dotenv import load_dotenv
 load_dotenv()
 
+# Ensure Streamlit page config is set before any Streamlit calls
+st.set_page_config(
+    page_title="CareerGenie - AI Career Assistant", 
+    layout="wide",
+    initial_sidebar_state="expanded",
+    menu_items={
+        'Get Help': 'https://www.example.com/help',
+        'Report a bug': "https://www.example.com/bug",
+        'About': "CareerGenie - Your AI-powered career companion!"
+    }
+)
+
 # Initialize session state
 if 'chat_history' not in st.session_state:
     st.session_state.chat_history = []
@@ -294,16 +306,6 @@ def setup_agent():
 agent_executor = setup_agent()
 
 # Enhanced UI
-st.set_page_config(
-    page_title="CareerGenie - AI Career Assistant", 
-    layout="wide",
-    initial_sidebar_state="expanded",
-    menu_items={
-        'Get Help': 'https://www.example.com/help',
-        'Report a bug': "https://www.example.com/bug",
-        'About': "CareerGenie - Your AI-powered career companion!"
-    }
-)
 
 # Main Header
 st.markdown("""
