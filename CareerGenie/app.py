@@ -9,20 +9,12 @@ from langchain_core.tools import tool
 import requests
 from langchain import hub
 import PyPDF2
-from io import BytesIO
-import tempfile
-import subprocess
-import boto3
-import hashlib
+import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
-import pandas as pd
 from datetime import datetime, timedelta
 import json
 import time
-import hashlib
-import tempfile
-import subprocess
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -228,62 +220,6 @@ def interview_question_generator(role: str, difficulty: str = "medium") -> str:
     response = llm.invoke(prompt)
     return response.content
 
-# Enhanced Voice Response Generator
-import tempfile
-import subprocess
-import hashlib
-from pathlib import Path
-
-@st.cache_data(show_spinner=False)
-def generate_audio_response(text: str, voice_id: str = "Joanna", format: str = "mp3") -> bytes:
-    """
-    Generate audio from text using Amazon Polly with optional format conversion.
-    Supports mp3 (default) and wav using ffmpeg. Caches results.
-    """
-    if not text.strip() or len(text) > 3000:
-        return None
-
-    # Create unique hash for caching
-    unique_hash = hashlib.md5((text + voice_id + format).encode()).hexdigest()
-    cache_path = Path(tempfile.gettempdir()) / f"{unique_hash}.{format}"
-
-    if cache_path.exists():
-        return cache_path.read_bytes()
-
-    try:
-        polly = boto3.client(
-            'polly',
-            aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
-            aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
-            region_name='us-east-1'
-        )
-        response = polly.synthesize_speech(
-            Text=text[:3000],
-            VoiceId=voice_id,
-            OutputFormat="mp3"
-        )
-
-        if "AudioStream" not in response:
-            return None
-
-        # Save to temp MP3
-        mp3_path = tempfile.NamedTemporaryFile(delete=False, suffix=".mp3").name
-        with open(mp3_path, "wb") as f:
-            f.write(response["AudioStream"].read())
-
-        # Convert if needed
-        if format == "wav":
-            wav_path = str(cache_path)
-            subprocess.run(["ffmpeg", "-y", "-i", mp3_path, wav_path], check=True)
-        else:
-            Path(mp3_path).rename(cache_path)
-
-        return cache_path.read_bytes()
-
-    except Exception as e:
-        st.error(f"🎧 Polly audio generation failed: {e}")
-        return None
-
 # LLM and Agent Setup
 @st.cache_resource
 def setup_agent():
@@ -400,13 +336,7 @@ with col1:
                         st.markdown("### 🌤️ Local Weather")
                         st.info(weather_info["output"])
                     
-                    # Audio response
-                    audio_bytes = generate_audio_response(response["output"][:1000], format="wav")
-                    if audio_bytes:
-                        st.audio(BytesIO(audio_bytes), format="audio/wav")
-                    else:
-                        st.warning("Audio could not be generated.")
-                        # Download option
+                    # Download option
                     st.download_button(
                         "📥 Download Research Report",
                         data=response["output"],
@@ -463,12 +393,6 @@ with col1:
                             for metric, score in scores.items():
                                 st.metric(metric, f"{score}/10", f"{score-5:.1f}")
                             
-                            # Audio feedback
-                            audio_bytes = generate_audio_response(response["output"][:1000], format="wav")
-                            if audio_bytes:
-                                st.audio(BytesIO(audio_bytes), format="audio/wav")
-                            else:
-                                st.warning("Audio could not be generated.")
                             st.download_button(
                                 "📥 Download Analysis Report",
                                 data=response["output"],
@@ -516,12 +440,6 @@ with col1:
                         placeholder.metric("Time Remaining", f"{mins:02d}:{secs:02d}")
                         time.sleep(1)
                 
-                # Audio questions
-                audio_bytes = generate_audio_response(response["output"][:1000], format="wav")
-                if audio_bytes:
-                    st.audio(BytesIO(audio_bytes), format="audio/wav")
-                else:
-                    st.warning("Audio could not be generated.")                
                 st.download_button(
                     "📥 Download Interview Questions",
                     data=response["output"],
@@ -572,12 +490,6 @@ with col1:
                 fig.update_layout(title="Career Progression Timeline", xaxis_title="Milestones", yaxis_title="Progress %")
                 st.plotly_chart(fig, use_container_width=True)
                 
-                # Audio roadmap
-                audio_bytes = generate_audio_response(response["output"][:1000], format="wav")
-                if audio_bytes:
-                    st.audio(BytesIO(audio_bytes), format="audio/wav")
-                else:
-                    st.warning("Audio could not be generated.")
                 st.download_button(
                     "📥 Download Career Roadmap",
                     data=response["output"],
